@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Family Loan Calculator</title>
+<title>Darr Family Loan Calculator</title>
 <meta name="description" content="Model a family-financed home purchase: loan terms, amortization, federal tax benefit, interest gifting, and a buying-process checklist.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B1F3A'/%3E%3Cpath d='M12 32 32 14l20 18v18H38V38H26v12H12z' fill='%236FA3FF'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -130,8 +130,8 @@ a{color:var(--blue)}
 <body>
 <header>
   <div class="wrap">
-    <h1>Family Loan Calculator</h1>
-    <p>Model buying a home with a family loan at the IRS applicable federal rate (AFR): payments, amortization, your federal tax benefit (Texas, no state income tax), interest gifting, and a closing checklist. Defaults set for 2608 Montrose Blvd, Houston, TX 77006.</p>
+    <h1>Darr Family Loan Calculator</h1>
+    <p>Model buying a home with a family loan at the IRS applicable federal rate (AFR): payments, amortization, your federal tax benefit (Texas, no state income tax), interest gifting, and a closing checklist. </p>
   </div>
 </header>
 <nav class="tabs"><div class="wrap">
@@ -246,6 +246,17 @@ a{color:var(--blue)}
 <div>
 
 <section id="overview">
+  <div class="card" id="prop">
+    <h2>2608 Montrose Blvd, Houston, TX 77006 <span class="tag">Active</span></h2>
+    <p class="sub">Hyde Park Annex townhome, MLS 63034744, listed by Martha Turner Sotheby's. <a href="https://www.har.com/homedetail/2608-montrose-blvd-houston-tx-77006/2964790" target="_blank" rel="noopener">View on HAR</a></p>
+    <div class="kpis" style="margin:0">
+      <div class="kpi"><div class="l">List price</div><div class="v">$650,000</div><div class="n" id="listCmp"></div></div>
+      <div class="kpi"><div class="l">Size</div><div class="v">2,744 sf</div><div class="n" id="ppsf">2 bed, 2.5 bath, built 1997</div></div>
+      <div class="kpi"><div class="l">HOA</div><div class="v">$574/mo</div><div class="n">Includes insurance, lawn care, gates, rec facilities</div></div>
+      <div class="kpi"><div class="l">Listed taxes</div><div class="v">$11,156</div><div class="n">2025, no exemptions, rate 2.1252%. HAR transfer fee $350</div></div>
+    </div>
+    <div class="btnrow" style="margin-top:12px"><button class="btn" id="listBtn">Set price to list ($650,000)</button></div>
+  </div>
   <div class="kpis" id="kpis"></div>
   <div id="insight"></div>
   <div class="charts">
@@ -350,13 +361,13 @@ const TAX = {
 const SALT_CAP = 40400;     // 2026 cap on state and local tax deduction (Texas: property tax only)
 const DEBT_CAP = 750000;    // acquisition debt limit for mortgage interest
 const DEFAULTS = {
-  price:550000, down:25000, rate:5.10, term:30, extra:0,
+  price:650000, down:25000, rate:5.10, term:30, extra:0,
   ptaxRate:1.75, ins:200, hoa:574, utils:250,
   salary:90000, filing:"single", otherItem:0,
   parentRate:45, donors:2, giftExcl:19000, giftPct:100, otherGifts:0, giftTax:"all",
   mktRate:7.5, rent:2800, budget:3500
 };
-const KEY = "condoLoan.v2", SKEY = "condoLoan.scn.v1", CKEY = "condoLoan.chk.v1";
+const KEY = "condoLoan.v3", SKEY = "condoLoan.scn.v1", CKEY = "condoLoan.chk.v1";
 
 /* ---------- helpers ---------- */
 const $ = id => document.getElementById(id);
@@ -494,6 +505,7 @@ function bind(){
     if(navigator.clipboard) navigator.clipboard.writeText(url).then(done,()=>prompt("Copy this link:",url)); else prompt("Copy this link:",url);
   });
   $("csvBtn").addEventListener("click", csv);
+  $("listBtn").addEventListener("click", ()=>{ S.price=650000; sync(); });
   $("scnSave").addEventListener("click", saveScn);
   $("budget").addEventListener("input", ()=>{ S.budget=num($("budget").value); renderBudget(); persist(); });
 }
@@ -574,6 +586,9 @@ function render(){
   const R = calc(S), M = calc(S, S.mktRate);
   const G = giftInfo(R);
   const y1 = R.y1;
+  const dl = S.price-650000;
+  $("listCmp").textContent = dl===0 ? "Your price equals list" : `Your price is ${usd(Math.abs(dl))} ${dl<0?"under":"over"} list (${pct(Math.abs(dl)/6500,1)})`;
+  $("ppsf").textContent = `${usd(S.price/2744)}/sf at your price. 2 bed, 2.5 bath, built 1997`;
 
   const afterGift = (R.payMo*12 - G.gifted)/12 + R.own - R.taxMo;
   $("kpis").innerHTML =
