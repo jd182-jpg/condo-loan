@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Loan Calculator</title>
+<meta name="description" content="Model a family-financed home purchase: loan terms, amortization, federal tax benefit, interest gifting, and a buying-process checklist.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B1F3A'/%3E%3Cpath d='M12 32 32 14l20 18v18H38V38H26v12H12z' fill='%236FA3FF'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F3F5F9; --card:#FFFFFF; --ink:#0B1F3A; --muted:#5B6B83; --line:#E2E7F0;
+  --navy:#0B1F3A; --blue:#2F6FED; --blue-soft:#E8F0FE; --green:#12805C; --green-soft:#E3F5EE;
+  --amber:#B26A00; --amber-soft:#FFF3DC; --red:#B42318; --red-soft:#FDECEA;
+  --c-int:#E08A2B; --c-prin:#2F6FED; --c-tax:#12805C; --c-mkt:#8A94A6;
+  --shadow:0 1px 2px rgba(11,31,58,.06),0 4px 14px rgba(11,31,58,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A1424; --card:#101D33; --ink:#E7EDF7; --muted:#92A2BC; --line:#1E3052;
+    --blue:#6FA3FF; --blue-soft:#14284A; --green:#4CC9A0; --green-soft:#0F2E28;
+    --amber:#F0B45A; --amber-soft:#33270F; --red:#FF8A7E; --red-soft:#3A1714;
+    --c-int:#F0A04B; --c-prin:#6FA3FF; --c-tax:#4CC9A0; --c-mkt:#8A94A6;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A1424; --card:#101D33; --ink:#E7EDF7; --muted:#92A2BC; --line:#1E3052;
+  --blue:#6FA3FF; --blue-soft:#14284A; --green:#4CC9A0; --green-soft:#0F2E28;
+  --amber:#F0B45A; --amber-soft:#33270F; --red:#FF8A7E; --red-soft:#3A1714;
+  --c-int:#F0A04B; --c-prin:#6FA3FF; --c-tax:#4CC9A0; --c-mkt:#8A94A6;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased}
+header{background:var(--navy);color:#fff;padding:22px 16px 20px}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px}
+header .wrap{padding:0}
+header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+header p{margin:4px 0 0;color:#B9C7DE;font-size:14px;max-width:760px}
+nav.tabs{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 16px}
+nav.tabs a{white-space:nowrap;padding:7px 14px;border-radius:999px;color:var(--muted);text-decoration:none;font-weight:600;font-size:14px}
+nav.tabs a:hover{background:var(--blue-soft);color:var(--blue)}
+nav.tabs a.on{background:var(--navy);color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) nav.tabs a.on{background:var(--blue);color:#0A1424}}
+main.layout{display:grid;grid-template-columns:340px 1fr;gap:20px;padding:20px 16px 60px;align-items:start}
+@media (max-width:980px){main.layout{grid-template-columns:1fr}}
+aside.inputs{position:sticky;top:60px;max-height:calc(100vh - 76px);overflow:auto;padding-right:2px}
+@media (max-width:980px){aside.inputs{position:static;max-height:none}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:16px;font-weight:700}
+.card h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+.field{margin-bottom:11px}
+.field label{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:4px}
+.field label span.hint{font-weight:500;color:var(--muted)}
+.inp{position:relative}
+.inp input,.inp select,input.plain{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px}
+.inp input:focus,.inp select:focus,input.plain:focus{outline:2px solid var(--blue);outline-offset:0;border-color:transparent}
+.inp.pre input{padding-left:24px}.inp.suf input{padding-right:30px}
+.inp .pfx,.inp .sfx{position:absolute;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+.inp .pfx{left:10px}.inp .sfx{right:11px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input[type=range]{width:100%;accent-color:var(--blue);margin:6px 0 0}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;padding:7px 8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button.on{background:var(--blue);color:#0A1424;border-color:var(--blue)}}
+details.grp{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+details.grp:first-of-type{border-top:0;margin-top:0;padding-top:0}
+details.grp>summary{cursor:pointer;font-weight:700;font-size:14px;list-style:none;display:flex;justify-content:space-between;margin-bottom:8px}
+details.grp>summary::after{content:"+";color:var(--muted)}
+details.grp[open]>summary::after{content:"-"}
+details.grp>summary::-webkit-details-marker{display:none}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .l{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .n{font-size:12.5px;color:var(--muted);margin-top:2px}
+.kpi.hl{background:var(--navy);border-color:var(--navy);color:#fff}
+.kpi.hl .l,.kpi.hl .n{color:#B9C7DE}
+.kpi.good .v{color:var(--green)}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1100px){.charts{grid-template-columns:1fr}}
+.chartbox{position:relative;height:290px}
+.callout{border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px}
+.callout.info{background:var(--blue-soft);color:var(--ink)}
+.callout.warn{background:var(--amber-soft)}
+.callout.bad{background:var(--red-soft)}
+.callout.ok{background:var(--green-soft)}
+.callout b{font-weight:700}
+.callout ul{margin:6px 0 0;padding-left:18px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;position:sticky;top:0;background:var(--card)}
+tr.cur td{background:var(--blue-soft);font-weight:700}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--blue-soft)}
+.tablewrap{overflow:auto;max-height:480px;border:1px solid var(--line);border-radius:10px}
+.stack{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:900px){.stack{grid-template-columns:1fr}}
+.eq{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.eq:last-child{border-bottom:0}.eq b{font-variant-numeric:tabular-nums}
+.eq.tot{font-weight:700;border-top:2px solid var(--line);border-bottom:0;margin-top:4px;padding-top:9px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+button.btn{padding:9px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+button.btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) button.btn.pri{background:var(--blue);color:#0A1424;border-color:var(--blue)}}
+button.btn:hover{filter:brightness(1.08)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chk{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.chk:last-child{border-bottom:0}
+.chk input{margin-top:4px;width:18px;height:18px;accent-color:var(--green);flex:none}
+.chk .t{font-weight:600}.chk .d{color:var(--muted);font-size:13.5px}
+.chk.done .t{text-decoration:line-through;color:var(--muted)}
+.phase{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--blue);margin:18px 0 2px}
+.phase:first-child{margin-top:0}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue);margin-left:6px}
+.disc{font-size:12.5px;color:var(--muted);margin-top:10px}
+a{color:var(--blue)}
+.scn td button{padding:3px 8px;font-size:12px}
+.foot{color:var(--muted);font-size:12.5px;padding:0 16px 40px;max-width:1280px;margin:0 auto}
+@media print{nav.tabs,aside.inputs,header p{display:none}main.layout{display:block}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Family Loan Calculator</h1>
+    <p>Model buying a home with a family loan at the IRS applicable federal rate (AFR): payments, amortization, your federal tax benefit (Texas, no state income tax), interest gifting, and a closing checklist.</p>
+  </div>
+</header>
+<nav class="tabs"><div class="wrap">
+  <a href="#overview" class="on">Overview</a>
+  <a href="#taxes">Tax benefit</a>
+  <a href="#parents">Lender side</a>
+  <a href="#compare">Compare &amp; rent</a>
+  <a href="#ladder">Offer ladder</a>
+  <a href="#schedule">Schedule</a>
+  <a href="#scenarios">Scenarios</a>
+  <a href="#checklist">Checklist</a>
+</div></nav>
+
+<div class="wrap">
+<main class="layout">
+
+<!-- ================= INPUTS ================= -->
+<aside class="inputs">
+  <div class="card">
+    <details class="grp" open>
+      <summary>Purchase</summary>
+      <div class="field"><label for="price">Purchase / offer price</label>
+        <div class="inp pre"><span class="pfx">$</span><input id="price" inputmode="decimal" data-money></div>
+        <input type="range" id="priceR" min="100000" max="2000000" step="5000">
+      </div>
+      <div class="row2">
+        <div class="field"><label for="down">Down payment</label>
+          <div class="inp pre"><span class="pfx">$</span><input id="down" inputmode="decimal" data-money></div></div>
+        <div class="field"><label for="downPct">% of price</label>
+          <div class="inp suf"><input id="downPct" inputmode="decimal"><span class="sfx">%</span></div></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="ptaxRate">Property tax <span class="hint">% / yr</span></label>
+          <div class="inp suf"><input id="ptaxRate" inputmode="decimal"><span class="sfx">%</span></div></div>
+        <div class="field"><label for="ins">Insurance <span class="hint">/ mo</span></label>
+          <div class="inp pre"><span class="pfx">$</span><input id="ins" inputmode="decimal" data-money></div></div>
+      </div>
+      <div class="field"><label for="hoa">HOA / condo dues <span class="hint">/ mo</span></label>
+        <div class="inp pre"><span class="pfx">$</span><input id="hoa" inputmode="decimal" data-money></div></div>
+    </details>
+
+    <details class="grp" open>
+      <summary>Loan terms</summary>
+      <div class="field"><label for="rate">Interest rate (AFR) <span class="hint">annual</span></label>
+        <div class="inp suf"><input id="rate" inputmode="decimal"><span class="sfx">%</span></div>
+        <input type="range" id="rateR" min="2" max="9" step="0.01">
+      </div>
+      <div class="field"><label>Term</label>
+        <div class="seg" id="termSeg">
+          <button data-t="10">10</button><button data-t="15">15</button><button data-t="20">20</button><button data-t="25">25</button><button data-t="30">30</button>
+        </div>
+        <div class="inp suf" style="margin-top:6px"><input id="term" inputmode="numeric"><span class="sfx">yrs</span></div>
+      </div>
+      <div class="field"><label for="extra">Extra principal <span class="hint">/ mo</span></label>
+        <div class="inp pre"><span class="pfx">$</span><input id="extra" inputmode="decimal" data-money></div></div>
+    </details>
+
+    <details class="grp" open>
+      <summary>Your taxes (Texas)</summary>
+      <div class="field"><label for="salary">Annual salary (gross)</label>
+        <div class="inp pre"><span class="pfx">$</span><input id="salary" inputmode="decimal" data-money></div></div>
+      <div class="field"><label for="filing">Filing status</label>
+        <div class="inp"><select id="filing">
+          <option value="single">Single</option><option value="hoh">Head of household</option><option value="mfj">Married filing jointly</option>
+        </select></div></div>
+      <div class="field"><label for="otherItem">Other itemized deductions <span class="hint">charity, etc.</span></label>
+        <div class="inp pre"><span class="pfx">$</span><input id="otherItem" inputmode="decimal" data-money></div></div>
+    </details>
+
+    <details class="grp">
+      <summary>Family lender &amp; gifting</summary>
+      <div class="field"><label for="parentRate">Lender marginal tax rate <span class="hint">ordinary income</span></label>
+        <div class="inp suf"><input id="parentRate" inputmode="decimal"><span class="sfx">%</span></div></div>
+      <div class="row2">
+        <div class="field"><label for="donors">Donors</label>
+          <div class="inp"><select id="donors"><option value="1">1</option><option value="2">2</option></select></div></div>
+        <div class="field"><label for="giftExcl">Exclusion / donor</label>
+          <div class="inp pre"><span class="pfx">$</span><input id="giftExcl" inputmode="decimal" data-money></div></div>
+      </div>
+      <div class="field"><label for="giftPct">Share of interest gifted back <span class="hint" id="giftPctV"></span></label>
+        <input type="range" id="giftPct" min="0" max="100" step="5"></div>
+      <div class="field"><label for="otherGifts">Other gifts to you this year <span class="hint">down payment, etc.</span></label>
+        <div class="inp pre"><span class="pfx">$</span><input id="otherGifts" inputmode="decimal" data-money></div></div>
+      <div class="field"><label for="giftTax">Lender tax treatment of gifted interest</label>
+        <div class="inp"><select id="giftTax">
+          <option value="all">Taxed on all interest received (conservative)</option>
+          <option value="net">Taxed only on interest not gifted (advisor framing)</option>
+        </select></div></div>
+    </details>
+
+    <details class="grp">
+      <summary>Comparisons</summary>
+      <div class="field"><label for="mktRate">Market mortgage rate <span class="hint">for comparison</span></label>
+        <div class="inp suf"><input id="mktRate" inputmode="decimal"><span class="sfx">%</span></div></div>
+      <div class="field"><label for="rent">Comparable rent <span class="hint">/ mo</span></label>
+        <div class="inp pre"><span class="pfx">$</span><input id="rent" inputmode="decimal" data-money></div></div>
+    </details>
+
+    <div class="btnrow" style="margin-top:14px">
+      <button class="btn" id="shareBtn">Copy share link</button>
+      <button class="btn" id="resetBtn">Reset</button>
+    </div>
+    <p class="disc" id="shareNote">Inputs save in this browser. The share link includes your salary, so send it only to people you trust.</p>
+  </div>
+</aside>
+
+<!-- ================= OUTPUTS ================= -->
+<div>
+
+<section id="overview">
+  <div class="kpis" id="kpis"></div>
+  <div id="insight"></div>
+  <div class="charts">
+    <div class="card"><h2>Where each payment goes</h2><p class="sub">Monthly interest vs principal over the life of the loan</p><div class="chartbox"><canvas id="c1"></canvas></div></div>
+    <div class="card"><h2>Balance and cumulative interest</h2><p class="sub">Remaining principal vs total interest paid to date</p><div class="chartbox"><canvas id="c2"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>Monthly cost breakdown</h2><p class="sub">Year 1 averages</p>
+    <div id="monthly"></div>
+  </div>
+</section>
+
+<section id="taxes">
+  <div class="card">
+    <h2>Federal tax benefit</h2>
+    <p class="sub">Texas has no state income tax, so this is federal only. Mortgage interest only helps if your itemized deductions beat the standard deduction.</p>
+    <div id="taxExplain"></div>
+    <div class="charts" style="margin-top:14px">
+      <div class="stack" style="grid-column:1/-1"><div id="taxCalc"></div><div id="taxBars"><div class="chartbox"><canvas id="c3"></canvas></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="parents">
+  <div class="card">
+    <h2>Lender side (parents)</h2>
+    <p class="sub">What the interest does for them, and whether gifting it back fits inside the annual gift exclusion.</p>
+    <div id="parentOut"></div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="card">
+    <h2>Family loan vs market mortgage</h2>
+    <div id="cmpOut"></div>
+    <div class="chartbox" style="margin-top:12px;height:260px"><canvas id="c4"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>Own vs rent</h2>
+    <div id="rentOut"></div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="card">
+    <h2>Offer ladder</h2>
+    <p class="sub">Same down payment, rate and term. Click a row to set it as your price.</p>
+    <div class="tablewrap"><table id="ladderT"></table></div>
+    <h3 style="margin-top:18px">Budget helper</h3>
+    <div class="row2" style="max-width:520px">
+      <div class="field"><label for="budget">Target monthly all-in cost <span class="hint">after tax savings</span></label>
+        <div class="inp pre"><span class="pfx">$</span><input id="budget" inputmode="decimal" data-money></div></div>
+      <div class="field"><label>Max price at your down payment</label><div class="kpi" style="padding:9px 12px"><div class="v" id="budgetOut" style="font-size:20px">-</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="schedule">
+  <div class="card">
+    <h2>Amortization schedule</h2>
+    <div class="btnrow" style="margin:6px 0 12px"><button class="btn" id="csvBtn">Download monthly CSV</button></div>
+    <div class="tablewrap"><table id="schedT"></table></div>
+  </div>
+</section>
+
+<section id="scenarios">
+  <div class="card">
+    <h2>Saved scenarios</h2>
+    <p class="sub">Save a version for each condo or offer and compare them side by side.</p>
+    <div class="btnrow" style="margin-bottom:12px"><input class="plain" id="scnName" placeholder="Name, e.g. 123 Main St #4B" style="max-width:300px"><button class="btn pri" id="scnSave">Save current</button></div>
+    <div class="tablewrap"><table id="scnT" class="scn"></table></div>
+  </div>
+</section>
+
+<section id="checklist">
+  <div class="card">
+    <h2>Buying-process checklist</h2>
+    <p class="sub">Checked items save in this browser. Verify the tax and legal points with your CPA and an attorney before relying on them.</p>
+    <div id="chkList"></div>
+  </div>
+  <div class="card">
+    <h2>Questions to put to the advisors</h2>
+    <div id="qs"></div>
+  </div>
+</section>
+
+</div>
+</main>
+</div>
+<div class="foot">Estimates for planning only, not tax, legal or investment advice. Uses 2026 federal brackets and standard deductions, held flat across all years (no inflation adjustment, no salary growth). Year 1 means the first 12 payments, not the first calendar tax year.</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- constants ---------- */
+const TAX = {
+  single:{std:16100,br:[[12400,.10],[50400,.12],[105700,.22],[201775,.24],[256225,.32],[640600,.35],[Infinity,.37]]},
+  hoh:{std:24150,br:[[17700,.10],[67450,.12],[105700,.22],[201750,.24],[256200,.32],[640600,.35],[Infinity,.37]]},
+  mfj:{std:32200,br:[[24800,.10],[100800,.12],[211400,.22],[403550,.24],[512450,.32],[768700,.35],[Infinity,.37]]}
+};
+const SALT_CAP = 40400;     // 2026 cap on state and local tax deduction (Texas: property tax only)
+const DEBT_CAP = 750000;    // acquisition debt limit for mortgage interest
+const DEFAULTS = {
+  price:575000, down:25000, rate:5.10, term:30, extra:0,
+  ptaxRate:1.9, ins:120, hoa:450,
+  salary:90000, filing:"single", otherItem:0,
+  parentRate:45, donors:2, giftExcl:19000, giftPct:100, otherGifts:0, giftTax:"all",
+  mktRate:7.5, rent:2800, budget:3500
+};
+const KEY = "condoLoan.v1", SKEY = "condoLoan.scn.v1", CKEY = "condoLoan.chk.v1";
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g,"")); return isFinite(n) ? n : 0; };
+const usd = n => (n<0?"-":"") + "$" + Math.round(Math.abs(n)).toLocaleString("en-US");
+const usd2 = n => (n<0?"-":"") + "$" + Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct = (n,d=1) => n.toFixed(d) + "%";
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---------- finance ---------- */
+function amort(P, ratePct, years, extra){
+  const n = Math.round(years*12), i = ratePct/1200;
+  const pay = P<=0 ? 0 : (i===0 ? P/n : P*i/(1-Math.pow(1+i,-n)));
+  const rows = []; let bal = P, cumI = 0;
+  for(let m=1; m<=n && bal>0.005; m++){
+    const int = bal*i;
+    let prin = Math.min(bal, pay - int + extra);
+    if(m===n) prin = bal;
+    bal -= prin; cumI += int;
+    rows.push({m, int, prin, bal:Math.max(0,bal), cumI});
+  }
+  return {pay, rows, n};
+}
+function yearly(rows){
+  const out = [];
+  for(let k=0; k<rows.length; k+=12){
+    const sl = rows.slice(k,k+12);
+    out.push({
+      y:k/12+1,
+      open: k===0 ? null : rows[k-1].bal,
+      int: sl.reduce((a,r)=>a+r.int,0),
+      prin: sl.reduce((a,r)=>a+r.prin,0),
+      bal: sl[sl.length-1].bal,
+      months: sl.length
+    });
+  }
+  return out;
+}
+function fedTax(taxable, filing){
+  let t = 0, prev = 0;
+  for(const [cap,r] of TAX[filing].br){
+    if(taxable > prev){ t += (Math.min(taxable,cap)-prev)*r; prev = cap; } else break;
+  }
+  return t;
+}
+function marginal(taxable, filing){
+  for(const [cap,r] of TAX[filing].br){ if(taxable <= cap) return r; }
+  return .37;
+}
+
+function calc(s, rate){
+  rate = rate==null ? s.rate : rate;
+  const loan = Math.max(0, s.price - s.down);
+  const A = amort(loan, rate, s.term, s.extra);
+  const ptax = s.price*s.ptaxRate/100;
+  const T = TAX[s.filing];
+  const salt = Math.min(ptax, SALT_CAP);
+  const years = yearly(A.rows).map((yr,idx)=>{
+    const open = idx===0 ? loan : yr.open;
+    const scale = open>DEBT_CAP ? DEBT_CAP/open : 1;
+    const ded = yr.int*scale;
+    const itemWith = ded + salt + s.otherItem;
+    const itemWithout = salt + s.otherItem;
+    const tStd = fedTax(Math.max(0, s.salary - T.std), s.filing);
+    const tWith = fedTax(Math.max(0, s.salary - Math.max(T.std,itemWith)), s.filing);
+    const tWithout = fedTax(Math.max(0, s.salary - Math.max(T.std,itemWithout)), s.filing);
+    return Object.assign(yr,{ded,itemWith,itemWithout,tStd,tWith,tWithout,
+      benefitInt: tWithout - tWith, benefitTot: tStd - tWith, itemizes: itemWith > T.std});
+  });
+  const y1 = years[0] || {int:0,prin:0,benefitInt:0,benefitTot:0,ded:0,itemWith:0,itemWithout:0,tStd:0,tWith:0,tWithout:0,itemizes:false};
+  const payMo = A.pay + s.extra;
+  const own = ptax/12 + s.ins + s.hoa;
+  const taxMo = y1.benefitInt/12;
+  const allIn = payMo + own - taxMo;
+  const taxable = Math.max(0, s.salary - T.std);
+  return {loan, A, years, y1, ptax, salt, payMo, own, taxMo, allIn,
+    totalInt: A.rows.length ? A.rows[A.rows.length-1].cumI : 0, months:A.rows.length, T, taxable,
+    marg: marginal(Math.max(0, s.salary - Math.max(T.std, y1.itemWith)), s.filing)};
+}
+
+/* ---------- state ---------- */
+let S = Object.assign({}, DEFAULTS);
+const NUMERIC = ["price","down","rate","term","extra","ptaxRate","ins","hoa","salary","otherItem","parentRate","donors","giftExcl","giftPct","otherGifts","mktRate","rent","budget"];
+const TEXT = ["filing","giftTax"];
+
+function load(){
+  const h = location.hash.replace(/^#/,"");
+  if(h.indexOf("=")>-1){
+    try{
+      const p = new URLSearchParams(h);
+      NUMERIC.forEach(k=>{ if(p.has(k)) S[k]=num(p.get(k)); });
+      TEXT.forEach(k=>{ if(p.has(k)) S[k]=p.get(k); });
+      return;
+    }catch(e){}
+  }
+  const saved = store.get(KEY);
+  if(saved) Object.assign(S, saved);
+}
+function persist(){ store.set(KEY, S); }
+
+function writeInputs(skip){
+  NUMERIC.forEach(k=>{
+    const el = $(k); if(!el || el===skip) return;
+    el.value = el.hasAttribute("data-money") ? Math.round(S[k]).toLocaleString("en-US") : S[k];
+  });
+  TEXT.forEach(k=>{ const el=$(k); if(el && el!==skip) el.value=S[k]; });
+  if(skip!==$("downPct")) $("downPct").value = S.price ? +(S.down/S.price*100).toFixed(2) : 0;
+  if(skip!==$("priceR")) $("priceR").value = S.price;
+  if(skip!==$("rateR")) $("rateR").value = S.rate;
+  $("giftPct").value = S.giftPct;
+  $("giftPctV").textContent = S.giftPct + "%";
+  document.querySelectorAll("#termSeg button").forEach(b=>b.classList.toggle("on", +b.dataset.t===S.term));
+}
+
+function bind(){
+  NUMERIC.forEach(k=>{
+    const el = $(k); if(!el) return;
+    el.addEventListener("input", ()=>{ S[k] = num(el.value); if(k==="term") S.term = Math.max(1,Math.min(40,S.term||30)); sync(el); });
+    if(el.hasAttribute("data-money")) el.addEventListener("blur", ()=>{ el.value = Math.round(S[k]).toLocaleString("en-US"); });
+  });
+  TEXT.forEach(k=> $(k).addEventListener("change", e=>{ S[k]=e.target.value; sync(e.target); }));
+  $("downPct").addEventListener("input", e=>{ S.down = Math.round(S.price*num(e.target.value)/100); sync(e.target); });
+  $("priceR").addEventListener("input", e=>{ S.price = +e.target.value; sync(e.target); });
+  $("rateR").addEventListener("input", e=>{ S.rate = +e.target.value; sync(e.target); });
+  document.querySelectorAll("#termSeg button").forEach(b=> b.addEventListener("click", ()=>{ S.term=+b.dataset.t; sync(); }));
+  $("resetBtn").addEventListener("click", ()=>{ if(confirm("Reset all inputs to defaults?")){ S=Object.assign({},DEFAULTS); sync(); } });
+  $("shareBtn").addEventListener("click", ()=>{
+    const p = new URLSearchParams(); NUMERIC.concat(TEXT).forEach(k=>p.set(k,S[k]));
+    const url = location.origin+location.pathname+"#"+p.toString();
+    const done = ()=>{ $("shareBtn").textContent="Copied"; setTimeout(()=>$("shareBtn").textContent="Copy share link",1600); };
+    if(navigator.clipboard) navigator.clipboard.writeText(url).then(done,()=>prompt("Copy this link:",url)); else prompt("Copy this link:",url);
+  });
+  $("csvBtn").addEventListener("click", csv);
+  $("scnSave").addEventListener("click", saveScn);
+  $("budget").addEventListener("input", ()=>{ S.budget=num($("budget").value); renderBudget(); persist(); });
+}
+function sync(skip){
+  if(S.down>S.price) S.down = S.price;
+  writeInputs(skip); persist(); render();
+}
+
+/* ---------- charts ---------- */
+const charts = {};
+function mk(id, cfg){
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart($(id), cfg);
+}
+function baseOpts(extra){
+  const grid = css("--line"), tick = css("--muted");
+  return Object.assign({
+    responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:"index",intersect:false},
+    plugins:{legend:{position:"bottom",labels:{boxWidth:12,color:tick,font:{size:12}}},
+      tooltip:{callbacks:{label:c=>" "+c.dataset.label+": "+usd(c.parsed.y)}}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:tick,maxTicksLimit:10},title:{display:true,text:"Year",color:tick}},
+      y:{grid:{color:grid},ticks:{color:tick,callback:v=>"$"+Math.round(v).toLocaleString("en-US")}}
+    }
+  }, extra||{});
+}
+
+function drawCharts(R, M){
+  if(typeof Chart==="undefined") return;
+  const rows = R.A.rows;
+  const lab = rows.map(r=>(r.m/12).toFixed(1));
+  const o1 = baseOpts();
+  o1.scales.x.ticks.callback = function(v){ const m = this.getLabelForValue(v); return Math.round(+m)===+m ? m : ""; };
+  o1.scales.y.stacked = true;
+  mk("c1",{type:"line",data:{labels:lab,datasets:[
+    {label:"Interest",data:rows.map(r=>r.int),borderColor:css("--c-int"),backgroundColor:css("--c-int")+"cc",fill:true,pointRadius:0,borderWidth:1,stack:"a"},
+    {label:"Principal",data:rows.map(r=>r.prin),borderColor:css("--c-prin"),backgroundColor:css("--c-prin")+"cc",fill:true,pointRadius:0,borderWidth:1,stack:"a"}
+  ]},options:o1});
+
+  const o2 = baseOpts();
+  mk("c2",{type:"line",data:{labels:lab,datasets:[
+    {label:"Loan balance",data:rows.map(r=>r.bal),borderColor:css("--c-prin"),backgroundColor:"transparent",pointRadius:0,borderWidth:2.5},
+    {label:"Interest paid to date",data:rows.map(r=>r.cumI),borderColor:css("--c-int"),backgroundColor:"transparent",pointRadius:0,borderWidth:2.5}
+  ]},options:o2});
+
+  const o3 = baseOpts();
+  o3.scales.x.ticks.maxTicksLimit = 15;
+  mk("c3",{type:"bar",data:{labels:R.years.map(y=>y.y),datasets:[
+    {type:"line",label:"Fed tax saved by interest",data:R.years.map(y=>y.benefitInt),borderColor:css("--c-tax"),backgroundColor:css("--c-tax"),pointRadius:2,borderWidth:2.5,yAxisID:"y"},
+    {label:"Interest paid",data:R.years.map(y=>y.int),backgroundColor:css("--c-int")+"cc",borderRadius:3}
+  ]},options:o3});
+
+  const o4 = baseOpts();
+  const n = Math.max(R.A.rows.length, M.A.rows.length);
+  const lab4 = Array.from({length:n},(_,i)=>((i+1)/12).toFixed(1));
+  o4.scales.x.ticks.callback = function(v){ const m=this.getLabelForValue(v); return Math.round(+m)===+m ? m : ""; };
+  const fill = (r,k)=>Array.from({length:n},(_,i)=> r[i] ? r[i][k] : (r.length?r[r.length-1][k]:0));
+  mk("c4",{type:"line",data:{labels:lab4,datasets:[
+    {label:"Family loan: cumulative interest",data:fill(R.A.rows,"cumI"),borderColor:css("--c-prin"),pointRadius:0,borderWidth:2.5},
+    {label:"Market mortgage: cumulative interest",data:fill(M.A.rows,"cumI"),borderColor:css("--c-mkt"),pointRadius:0,borderWidth:2.5,borderDash:[6,4]}
+  ]},options:o4});
+}
+
+/* ---------- renderers ---------- */
+function kpi(l,v,n,cls){ return `<div class="kpi ${cls||""}"><div class="l">${l}</div><div class="v">${v}</div><div class="n">${n||""}</div></div>`; }
+function eq(l,v,cls){ return `<div class="eq ${cls||""}"><span>${l}</span><b>${v}</b></div>`; }
+
+function giftInfo(R){
+  const interest = R.y1.int;
+  const gifted = interest*S.giftPct/100;
+  const cap = S.giftExcl*S.donors;
+  const room = Math.max(0, cap - S.otherGifts);
+  return {gifted, cap, room, over: gifted>room, perDonor: gifted/S.donors};
+}
+
+function render(){
+  const R = calc(S), M = calc(S, S.mktRate);
+  const G = giftInfo(R);
+  const y1 = R.y1;
+
+  const afterGift = (R.payMo*12 - G.gifted)/12 + R.own - R.taxMo;
+  $("kpis").innerHTML =
+    kpi("Loan amount", usd(R.loan), `${pct(R.loan/(S.price||1)*100,0)} of price at ${pct(S.rate,2)}`, "hl") +
+    kpi("Monthly P&I", usd2(R.payMo), `${R.months} payments, paid off in ${(R.months/12).toFixed(1)} yrs`) +
+    kpi("Year 1 interest", usd(y1.int), `${pct(y1.int/(R.payMo*12||1)*100,0)} of year 1 payments`) +
+    kpi("Fed tax saved, yr 1", usd(y1.benefitInt), y1.itemizes ? `from the interest, at ${pct(R.marg*100,0)} bracket` : "you would not itemize, so $0", y1.benefitInt>0?"good":"") +
+    kpi("All-in monthly", usd(R.allIn), "P&I + tax + insurance + HOA, minus tax savings") +
+    kpi("Out of pocket with gift", usd(afterGift), `if ${S.giftPct}% of year 1 interest is gifted back`, "good") +
+    kpi("Lifetime interest", usd(R.totalInt), `vs ${usd(M.totalInt)} at ${pct(S.mktRate,2)} market`);
+
+  let ins = "";
+  if(S.price<=0 || R.loan<=0) ins = `<div class="callout info">No loan in this scenario. Reduce the down payment to model a family loan.</div>`;
+  else {
+    ins = `<div class="callout info"><b>Year 1 at a glance:</b> you pay ${usd(R.payMo*12)} to your family, ${usd(y1.int)} of it interest. `+
+      (y1.benefitInt>0 ? `That interest lowers your federal tax by about <b>${usd(y1.benefitInt)}</b>.` : `At this salary the interest does not move your tax bill, because your itemized deductions (${usd(y1.itemWith)}) do not clear the ${usd(R.T.std)} standard deduction.`) +
+      ` With the interest gifted back (${usd(G.gifted)}), you carry about <b>${usd(afterGift)}/mo</b> all-in.</div>`;
+    if(R.loan>DEBT_CAP) ins += `<div class="callout warn">The loan is above the $750,000 acquisition-debt limit, so interest on the excess is not deductible. The model scales the deduction down.</div>`;
+    if(S.rate<3) ins += `<div class="callout warn">Rate looks very low. For a loan to be treated as arm's-length, the rate generally cannot be below the AFR for the month the loan is made.</div>`;
+  }
+  $("insight").innerHTML = ins;
+
+  // monthly breakdown
+  $("monthly").innerHTML =
+    eq("Principal (year 1 avg)", usd(y1.prin/12)) + eq("Interest (year 1 avg)", usd(y1.int/12)) +
+    (S.extra>0 ? eq("Extra principal", usd(S.extra)) : "") +
+    eq("Property tax", usd(R.ptax/12)) + eq("Insurance", usd(S.ins)) + eq("HOA / condo dues", usd(S.hoa)) +
+    eq("Federal tax savings from interest", "-"+usd(R.taxMo), "pos") +
+    eq("All-in monthly cost", usd(R.allIn), "tot") +
+    eq("Less interest gifted back", "-"+usd(G.gifted/12), "pos") +
+    eq("Out-of-pocket monthly with gift", usd(afterGift), "tot");
+
+  renderTax(R); renderParents(R,G); renderCompare(R,M); renderLadder(); renderBudget(); renderSched(R); renderScn(); drawCharts(R,M);
+}
+
+function renderTax(R){
+  const T = R.T, y1 = R.y1;
+  const stdTaxable = Math.max(0, S.salary - T.std);
+  $("taxExplain").innerHTML = y1.itemizes
+    ? `<div class="callout ok"><b>You itemize in year 1.</b> Mortgage interest (${usd(y1.ded)}) plus property tax (${usd(R.salt)}) plus other (${usd(S.otherItem)}) = ${usd(y1.itemWith)}, which beats the ${usd(T.std)} standard deduction. The interest alone is worth <b>${usd(y1.benefitInt)}</b>; itemizing overall saves <b>${usd(y1.benefitTot)}</b> vs taking the standard deduction.</div>`
+    : `<div class="callout warn"><b>You would take the standard deduction in year 1.</b> Itemized total is ${usd(y1.itemWith)} vs ${usd(T.std)} standard, so the mortgage interest saves nothing. Higher salary, a larger loan, or higher rate and property tax can change that.</div>`;
+  $("taxCalc").innerHTML =
+    `<h3>Year 1 federal tax</h3>` +
+    eq("Salary", usd(S.salary)) +
+    eq("Standard deduction", usd(T.std)) +
+    eq("Taxable income (standard)", usd(stdTaxable)) +
+    eq("Tax with standard deduction", usd(y1.tStd)) +
+    eq("Itemized: mortgage interest", usd(y1.ded)) +
+    eq(`Itemized: property tax${R.ptax>SALT_CAP?" (capped)":""}`, usd(R.salt)) +
+    eq("Itemized: other", usd(S.otherItem)) +
+    eq("Itemized total", usd(y1.itemWith)) +
+    eq("Tax with itemizing", usd(y1.tWith)) +
+    eq("Tax saved by the interest", usd(y1.benefitInt), "tot") +
+    eq("Total saved vs standard", usd(y1.benefitTot)) +
+    `<p class="disc">Itemized without the loan interest would be ${usd(y1.itemWithout)} (property tax + other), so "saved by the interest" isolates what the family loan structure adds over a no-loan purchase.</p>`;
+}
+
+function renderParents(R,G){
+  const y1 = R.y1, r = S.parentRate/100;
+  const received = y1.int;
+  const taxable = S.giftTax==="all" ? received : received - G.gifted;
+  const tax = taxable*r;
+  const net = received - tax - G.gifted;
+  const lifeInt = R.totalInt;
+  const flagCls = G.over ? "bad" : "ok";
+  $("parentOut").innerHTML =
+    `<div class="stack"><div>
+      <h3>Year 1 lender economics</h3>
+      ${eq("Interest received", usd(received))}
+      ${eq("Interest gifted back to you", "-"+usd(G.gifted))}
+      ${eq(`Tax on interest at ${pct(S.parentRate,0)}`, "-"+usd(tax))}
+      ${eq("Net to the lenders after tax and gift", usd(net), "tot")}
+      ${eq("Principal repaid to them", usd(y1.prin))}
+      ${eq("Lifetime interest received", usd(lifeInt))}
+    </div><div>
+      <h3>Annual gift exclusion check</h3>
+      <div class="callout ${flagCls}">${G.over
+        ? `<b>Over the exclusion.</b> Gifting ${usd(G.gifted)} plus ${usd(S.otherGifts)} of other gifts exceeds ${usd(G.cap)} (${S.donors} donor${S.donors>1?"s":""} x ${usd(S.giftExcl)}). The excess needs a gift tax return (Form 709) and uses lifetime exclusion. Lower the share gifted back or the other gifts.`
+        : `<b>Inside the exclusion.</b> Gifting ${usd(G.gifted)} (${usd(G.perDonor)} per donor) plus ${usd(S.otherGifts)} of other gifts fits within ${usd(G.cap)} of annual exclusions, with ${usd(G.cap-S.otherGifts-G.gifted)} to spare.`}</div>
+      <div class="callout warn"><b>Check this with the advisors:</b> if the lenders receive the interest and then gift cash back, the IRS generally still treats the interest as their income. The setting "Lender tax treatment" above toggles the conservative view (taxed on everything received) versus the advisor email's framing (taxed only on what is not gifted). Interest the borrower never actually pays is not deductible, so the payment and gift should be two separate, documented transfers.</div>
+    </div></div>`;
+}
+
+function renderCompare(R,M){
+  const d = (a,b)=>a-b;
+  $("cmpOut").innerHTML =
+    `<div class="tablewrap"><table>
+      <tr><th></th><th>Family loan</th><th>Market mortgage</th><th>Difference</th></tr>
+      <tr><td>Rate</td><td>${pct(S.rate,2)}</td><td>${pct(S.mktRate,2)}</td><td>${pct(S.rate-S.mktRate,2)}</td></tr>
+      <tr><td>Monthly P&amp;I</td><td>${usd2(R.A.pay)}</td><td>${usd2(M.A.pay)}</td><td class="${R.A.pay<=M.A.pay?"pos":"neg"}">${usd2(d(R.A.pay,M.A.pay))}</td></tr>
+      <tr><td>Year 1 interest</td><td>${usd(R.y1.int)}</td><td>${usd(M.y1.int)}</td><td>${usd(d(R.y1.int,M.y1.int))}</td></tr>
+      <tr><td>Fed tax saved, year 1</td><td>${usd(R.y1.benefitInt)}</td><td>${usd(M.y1.benefitInt)}</td><td>${usd(d(R.y1.benefitInt,M.y1.benefitInt))}</td></tr>
+      <tr><td>All-in monthly (after tax savings)</td><td>${usd(R.allIn)}</td><td>${usd(M.allIn)}</td><td class="${R.allIn<=M.allIn?"pos":"neg"}">${usd(d(R.allIn,M.allIn))}</td></tr>
+      <tr><td>Lifetime interest</td><td>${usd(R.totalInt)}</td><td>${usd(M.totalInt)}</td><td class="${R.totalInt<=M.totalInt?"pos":"neg"}">${usd(d(R.totalInt,M.totalInt))}</td></tr>
+    </table></div>
+    <p class="disc">A market mortgage also brings lender fees and underwriting; the family loan does not. Flexibility to re-paper the note at a lower AFR is the main advantage.</p>`;
+}
+
+function renderRent(R){}
+
+function renderLadderRows(){
+  const rows = [];
+  for(let d=-50000; d<=50000; d+=10000){
+    const p = S.price + d; if(p<=0) continue;
+    const s2 = Object.assign({}, S, {price:p, down: Math.min(S.down,p)});
+    const r = calc(s2);
+    rows.push({p, d, r, cur:d===0});
+  }
+  return rows;
+}
+function renderLadder(){
+  const rows = renderLadderRows();
+  $("ladderT").innerHTML = `<tr><th>Price</th><th>vs current</th><th>Loan</th><th>P&amp;I / mo</th><th>All-in / mo</th><th>Yr 1 interest</th><th>Yr 1 tax saved</th></tr>` +
+    rows.map(x=>`<tr class="click ${x.cur?"cur":""}" data-p="${x.p}"><td>${usd(x.p)}</td><td>${x.d===0?"current":(x.d>0?"+":"-")+usd(Math.abs(x.d))}</td><td>${usd(x.r.loan)}</td><td>${usd(x.r.payMo)}</td><td>${usd(x.r.allIn)}</td><td>${usd(x.r.y1.int)}</td><td>${usd(x.r.y1.benefitInt)}</td></tr>`).join("");
+  $("ladderT").querySelectorAll("tr.click").forEach(tr=>tr.addEventListener("click",()=>{ S.price=+tr.dataset.p; sync(); }));
+}
+function renderBudget(){
+  const target = S.budget;
+  let lo=0, hi=5000000;
+  for(let k=0;k<50;k++){
+    const mid=(lo+hi)/2;
+    const r = calc(Object.assign({},S,{price:mid, down:Math.min(S.down,mid)}));
+    if(r.allIn>target) hi=mid; else lo=mid;
+  }
+  $("budgetOut").textContent = target>0 ? usd(Math.floor(lo/1000)*1000) : "-";
+}
+
+function renderSched(R){
+  $("schedT").innerHTML = `<tr><th>Year</th><th>Payments</th><th>Interest</th><th>Principal</th><th>End balance</th><th>Itemized</th><th>Fed tax saved</th></tr>` +
+    R.years.map(y=>`<tr><td>${y.y}</td><td>${usd(y.int+y.prin)}</td><td>${usd(y.int)}</td><td>${usd(y.prin)}</td><td>${usd(y.bal)}</td><td>${y.itemizes?"Yes":"No"}</td><td>${usd(y.benefitInt)}</td></tr>`).join("");
+}
+function csv(){
+  const R = calc(S);
+  const lines = ["Month,Interest,Principal,Balance"].concat(R.A.rows.map(r=>[r.m,r.int.toFixed(2),r.prin.toFixed(2),r.bal.toFixed(2)].join(",")));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/csv"}));
+  a.download = "amortization.csv"; a.click();
+}
+
+/* own vs rent */
+function renderRentBlock(R){
+  const own = R.payMo*12 + R.own*12 - R.y1.benefitInt;
+  const interestPortion = R.y1.int + R.ptax + (S.ins+S.hoa)*12 - R.y1.benefitInt;
+  const rent = S.rent*12;
+  $("rentOut").innerHTML =
+    `<div class="stack"><div>
+      ${eq("Rent, per month", usd(S.rent))}
+      ${eq("Own, all-in per month", usd(R.allIn))}
+      ${eq("Own vs rent, per month", usd(R.allIn-S.rent), R.allIn<=S.rent?"tot pos":"tot neg")}
+    </div><div>
+      ${eq("Year 1 cash out to own", usd(own))}
+      ${eq("   of which principal (builds equity)", usd(R.y1.prin))}
+      ${eq("Year 1 true cost of owning", usd(interestPortion))}
+      ${eq("Year 1 rent", usd(rent))}
+      ${eq("Year 1 owning vs renting, true cost", usd(interestPortion-rent), interestPortion<=rent?"tot pos":"tot neg")}
+    </div></div>
+    <p class="disc">True cost excludes principal, which you get back as equity, and excludes appreciation, closing costs, maintenance and special assessments, so it flatters ownership. The advisors' point stands: appreciation or debt paydown has to cover the gap between owning and renting.</p>`;
+}
+
+/* scenarios */
+function saveScn(){
+  const name = $("scnName").value.trim() || ("Scenario " + (((store.get(SKEY)||[]).length)+1));
+  const list = store.get(SKEY) || [];
+  list.push({name, s:Object.assign({},S)});
+  store.set(SKEY,list); $("scnName").value=""; renderScn();
+}
+function renderScn(){
+  const list = store.get(SKEY) || [];
+  if(!list.length){ $("scnT").innerHTML = `<tr><td style="text-align:left;color:var(--muted)">Nothing saved yet.</td></tr>`; return; }
+  $("scnT").innerHTML = `<tr><th>Name</th><th>Price</th><th>Rate</th><th>Term</th><th>P&amp;I / mo</th><th>All-in / mo</th><th>Yr 1 tax saved</th><th></th></tr>` +
+    list.map((x,i)=>{ const r=calc(Object.assign({},DEFAULTS,x.s));
+      return `<tr><td>${x.name.replace(/</g,"&lt;")}</td><td>${usd(x.s.price)}</td><td>${pct(x.s.rate,2)}</td><td>${x.s.term} yr</td><td>${usd(r.payMo)}</td><td>${usd(r.allIn)}</td><td>${usd(r.y1.benefitInt)}</td><td><button class="btn" data-l="${i}">Load</button> <button class="btn" data-d="${i}">Delete</button></td></tr>`; }).join("");
+  $("scnT").querySelectorAll("[data-l]").forEach(b=>b.addEventListener("click",()=>{ S=Object.assign({},DEFAULTS,list[+b.dataset.l].s); sync(); window.scrollTo({top:0,behavior:"smooth"}); }));
+  $("scnT").querySelectorAll("[data-d]").forEach(b=>b.addEventListener("click",()=>{ list.splice(+b.dataset.d,1); store.set(SKEY,list); renderScn(); }));
+}
+
+/* checklist */
+const CHECK = [
+ ["Before you make an offer",[
+  ["Lock the family structure with the advisors","Confirm you are the buyer and your parents are the lender. Ask for their sample promissory note and the loan schedule, and agree on amounts and who pays which closing costs."],
+  ["Pick the AFR","Use the IRS applicable federal rate for the month the loan is made (long-term rate for terms over 9 years). The rate is fixed for that note. Check the current monthly Revenue Ruling."],
+  ["Set a price range and budget","Use the offer ladder and budget helper here. Include HOA, insurance and property tax, not only P&I."],
+  ["Get HOA documents early","Budget, reserves, special assessments, rental caps, litigation and the resale certificate. Dues and assessments change the all-in number."]]],
+ ["Offer and contract",[
+  ["Make a cash offer in your name","No financing contingency, funds come from the family loan and any gifted down payment. Tell the agent and title company the source of funds early."],
+  ["Order inspection and review the survey/title","Condo: ask about the master policy, building systems and flood history."],
+  ["Line up your insurance quote","HO-6 policy for a condo. Get it before closing."]]],
+ ["Loan documents (before closing)",[
+  ["Sign the promissory note","Borrower you, lender your parents. States rate, term, payment schedule, prepayment rights and default terms. Both sign and date it."],
+  ["Prepare a Texas deed of trust","Secures the note against the property so the loan is a real secured mortgage. Have an attorney or the title company draft it."],
+  ["Plan the money flow","Lender funds go to the title company by wire for closing. Gifted money should be a separate, documented transfer with a gift letter."]]],
+ ["Closing day",[
+  ["Record the deed and the deed of trust","Title company records both in the county clerk's records. Confirm you receive recorded copies."],
+  ["Confirm title is in your name","And file a Texas homestead exemption application with the appraisal district for the year after closing, to lower the property tax."]]],
+ ["After closing",[
+  ["Set up automatic monthly payments","From your account to your parents' account, every month, same amount. Keep the bank records. Interest must actually be paid to be deductible."],
+  ["Handle the interest gift separately","If your parents gift interest back, do it as its own transfer, within the annual exclusion, with a short written record each year."],
+  ["Tax filing each year","You itemize on Schedule A and list the lender's name, address and taxpayer ID for the interest. Your parents report the interest as income. Have your CPA confirm the reporting."],
+  ["Revisit rates annually","If AFR falls well below your note's rate, ask the advisors about papering a new or amended note, as in the email."]]]
+];
+function renderChecklist(){
+  const done = store.get(CKEY) || {};
+  $("chkList").innerHTML = CHECK.map(([ph,items])=>`<div class="phase">${ph}</div>`+items.map(([t,d],i)=>{
+    const id = ph+"|"+t;
+    return `<label class="chk ${done[id]?"done":""}"><input type="checkbox" data-id="${id.replace(/"/g,"&quot;")}" ${done[id]?"checked":""}><div><div class="t">${t}</div><div class="d">${d}</div></div></label>`;
+  }).join("")).join("");
+  $("chkList").querySelectorAll("input").forEach(cb=>cb.addEventListener("change",()=>{
+    const d = store.get(CKEY)||{}; d[cb.dataset.id]=cb.checked; store.set(CKEY,d);
+    cb.closest(".chk").classList.toggle("done",cb.checked);
+  }));
+}
+const QUESTIONS = [
+ "Are my parents taxed on all the interest they receive, even if they gift the same dollars back? What is the right way to structure and document the gift so the interest I deduct is actually paid by me?",
+ "Which AFR applies (month of closing), and does the loan need to be fixed at that rate for the full term? What happens if I want to re-paper at a lower rate later?",
+ "Is the deed of trust enough to make this home acquisition debt for me, and does a condo I live in qualify as my main home?",
+ "What do my parents need to file (interest income, gift tax return thresholds), and does a lender who is not in the lending business have to issue a Form 1098?",
+ "How should the loan be treated in their estate if they pass while it is outstanding, and what happens if I sell the condo early?",
+ "At my salary, will I itemize, or does the standard deduction win? (The Tax benefit section shows this for any salary.)"
+];
+function renderQs(){ $("qs").innerHTML = `<ol style="padding-left:20px;margin:0">`+QUESTIONS.map(q=>`<li style="margin-bottom:8px">${q}</li>`).join("")+`</ol>`; }
+
+/* nav highlight */
+function navSpy(){
+  const links = [...document.querySelectorAll("nav.tabs a")];
+  const secs = links.map(a=>document.querySelector(a.getAttribute("href")));
+  const on = ()=>{ let idx=0; secs.forEach((s,i)=>{ if(s && s.getBoundingClientRect().top < 120) idx=i; }); links.forEach((a,i)=>a.classList.toggle("on",i===idx)); };
+  window.addEventListener("scroll", on, {passive:true}); on();
+}
+
+/* wrap render to include rent block */
+const _render = render;
+render = function(){ _render(); renderRentBlock(calc(S)); };
+
+/* init */
+load(); writeInputs(); bind(); renderChecklist(); renderQs(); render(); navSpy();
+if(window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>render());
+})();
+</script>
+</body>
+</html>
