@@ -131,7 +131,7 @@ a{color:var(--blue)}
 <header>
   <div class="wrap">
     <h1>Family Loan Calculator</h1>
-    <p>Model buying a home with a family loan at the IRS applicable federal rate (AFR): payments, amortization, your federal tax benefit (Texas, no state income tax), interest gifting, and a closing checklist.</p>
+    <p>Model buying a home with a family loan at the IRS applicable federal rate (AFR): payments, amortization, your federal tax benefit (Texas, no state income tax), interest gifting, and a closing checklist. Defaults set for 2608 Montrose Blvd, Houston, TX 77006.</p>
   </div>
 </header>
 <nav class="tabs"><div class="wrap">
@@ -169,8 +169,12 @@ a{color:var(--blue)}
         <div class="field"><label for="ins">Insurance <span class="hint">/ mo</span></label>
           <div class="inp pre"><span class="pfx">$</span><input id="ins" inputmode="decimal" data-money></div></div>
       </div>
-      <div class="field"><label for="hoa">HOA / condo dues <span class="hint">/ mo</span></label>
-        <div class="inp pre"><span class="pfx">$</span><input id="hoa" inputmode="decimal" data-money></div></div>
+      <div class="row2">
+        <div class="field"><label for="hoa">HOA dues <span class="hint">/ mo</span></label>
+          <div class="inp pre"><span class="pfx">$</span><input id="hoa" inputmode="decimal" data-money></div></div>
+        <div class="field"><label for="utils">Utilities <span class="hint">/ mo</span></label>
+          <div class="inp pre"><span class="pfx">$</span><input id="utils" inputmode="decimal" data-money></div></div>
+      </div>
     </details>
 
     <details class="grp" open>
@@ -311,7 +315,7 @@ a{color:var(--blue)}
   <div class="card">
     <h2>Saved scenarios</h2>
     <p class="sub">Save a version for each condo or offer and compare them side by side.</p>
-    <div class="btnrow" style="margin-bottom:12px"><input class="plain" id="scnName" placeholder="Name, e.g. 123 Main St #4B" style="max-width:300px"><button class="btn pri" id="scnSave">Save current</button></div>
+    <div class="btnrow" style="margin-bottom:12px"><input class="plain" id="scnName" placeholder="Name, e.g. 2608 Montrose Blvd" style="max-width:300px"><button class="btn pri" id="scnSave">Save current</button></div>
     <div class="tablewrap"><table id="scnT" class="scn"></table></div>
   </div>
 </section>
@@ -346,13 +350,13 @@ const TAX = {
 const SALT_CAP = 40400;     // 2026 cap on state and local tax deduction (Texas: property tax only)
 const DEBT_CAP = 750000;    // acquisition debt limit for mortgage interest
 const DEFAULTS = {
-  price:575000, down:25000, rate:5.10, term:30, extra:0,
-  ptaxRate:1.9, ins:120, hoa:450,
+  price:550000, down:25000, rate:5.10, term:30, extra:0,
+  ptaxRate:1.75, ins:200, hoa:574, utils:250,
   salary:90000, filing:"single", otherItem:0,
   parentRate:45, donors:2, giftExcl:19000, giftPct:100, otherGifts:0, giftTax:"all",
   mktRate:7.5, rent:2800, budget:3500
 };
-const KEY = "condoLoan.v1", SKEY = "condoLoan.scn.v1", CKEY = "condoLoan.chk.v1";
+const KEY = "condoLoan.v2", SKEY = "condoLoan.scn.v1", CKEY = "condoLoan.chk.v1";
 
 /* ---------- helpers ---------- */
 const $ = id => document.getElementById(id);
@@ -428,7 +432,7 @@ function calc(s, rate){
   });
   const y1 = years[0] || {int:0,prin:0,benefitInt:0,benefitTot:0,ded:0,itemWith:0,itemWithout:0,tStd:0,tWith:0,tWithout:0,itemizes:false};
   const payMo = A.pay + s.extra;
-  const own = ptax/12 + s.ins + s.hoa;
+  const own = ptax/12 + s.ins + s.hoa + s.utils;
   const taxMo = y1.benefitInt/12;
   const allIn = payMo + own - taxMo;
   const taxable = Math.max(0, s.salary - T.std);
@@ -439,7 +443,7 @@ function calc(s, rate){
 
 /* ---------- state ---------- */
 let S = Object.assign({}, DEFAULTS);
-const NUMERIC = ["price","down","rate","term","extra","ptaxRate","ins","hoa","salary","otherItem","parentRate","donors","giftExcl","giftPct","otherGifts","mktRate","rent","budget"];
+const NUMERIC = ["price","down","rate","term","extra","ptaxRate","ins","hoa","utils","salary","otherItem","parentRate","donors","giftExcl","giftPct","otherGifts","mktRate","rent","budget"];
 const TEXT = ["filing","giftTax"];
 
 function load(){
@@ -577,7 +581,7 @@ function render(){
     kpi("Monthly P&I", usd2(R.payMo), `${R.months} payments, paid off in ${(R.months/12).toFixed(1)} yrs`) +
     kpi("Year 1 interest", usd(y1.int), `${pct(y1.int/(R.payMo*12||1)*100,0)} of year 1 payments`) +
     kpi("Fed tax saved, yr 1", usd(y1.benefitInt), y1.itemizes ? `from the interest, at ${pct(R.marg*100,0)} bracket` : "you would not itemize, so $0", y1.benefitInt>0?"good":"") +
-    kpi("All-in monthly", usd(R.allIn), "P&I + tax + insurance + HOA, minus tax savings") +
+    kpi("All-in monthly", usd(R.allIn), "P&I + tax + insurance + HOA + utilities, minus tax savings") +
     kpi("Out of pocket with gift", usd(afterGift), `if ${S.giftPct}% of year 1 interest is gifted back`, "good") +
     kpi("Lifetime interest", usd(R.totalInt), `vs ${usd(M.totalInt)} at ${pct(S.mktRate,2)} market`);
 
@@ -596,7 +600,7 @@ function render(){
   $("monthly").innerHTML =
     eq("Principal (year 1 avg)", usd(y1.prin/12)) + eq("Interest (year 1 avg)", usd(y1.int/12)) +
     (S.extra>0 ? eq("Extra principal", usd(S.extra)) : "") +
-    eq("Property tax", usd(R.ptax/12)) + eq("Insurance", usd(S.ins)) + eq("HOA / condo dues", usd(S.hoa)) +
+    eq("Property tax", usd(R.ptax/12)) + eq("Insurance", usd(S.ins)) + eq("HOA dues", usd(S.hoa)) + eq("Utilities", usd(S.utils)) +
     eq("Federal tax savings from interest", "-"+usd(R.taxMo), "pos") +
     eq("All-in monthly cost", usd(R.allIn), "tot") +
     eq("Less interest gifted back", "-"+usd(G.gifted/12), "pos") +
@@ -712,7 +716,7 @@ function csv(){
 /* own vs rent */
 function renderRentBlock(R){
   const own = R.payMo*12 + R.own*12 - R.y1.benefitInt;
-  const interestPortion = R.y1.int + R.ptax + (S.ins+S.hoa)*12 - R.y1.benefitInt;
+  const interestPortion = R.y1.int + R.ptax + (S.ins+S.hoa+S.utils)*12 - R.y1.benefitInt;
   const rent = S.rent*12;
   $("rentOut").innerHTML =
     `<div class="stack"><div>
